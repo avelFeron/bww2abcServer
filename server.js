@@ -137,7 +137,7 @@ const INDEX_HTML = `<!doctype html>
       </div>
 
       <p class="hint links" style="margin-top:10px">
-        Référence bww2abc originale : <a href="http://moinejf.free.fr/" target="_blank" rel="noreferrer">moinejf.free.fr</a>
+        Un grand merci à Jef Moine pour le fichier bww2abc originale : <a href="http://moinejf.free.fr/" target="_blank" rel="noreferrer">moinejf.free.fr</a>
       </p>
     </div>
   </div>
