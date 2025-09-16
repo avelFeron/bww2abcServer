@@ -120,7 +120,7 @@ const INDEX_HTML = `<!doctype html>
       <h1>Convertir des fichiers <code>.bww</code> en <code>.abc</code></h1>
       <p>Déposez un ou plusieurs fichiers .bww ci-dessous, ou cliquez pour choisir.</p>
       <p><a href="https://bagpipetunes.intertechnics.com/" target="blank">https://bagpipetunes.intertechnics.com/</a></p>
-      <p><a href="https://abc.rectanglered.com/" target="blank">To edit the abc file</a></p>
+      <p><a href="https://abc.rectanglered.com/" target="blank">Pour afficher et imprimer la partition abc</a></p>
 
       <label class="drop" id="drop">
         <strong>Glissez-déposez ici</strong>
