@@ -3,7 +3,7 @@
 `bww2abc-server` is a Node.js web application that lets you convert **.bww** files  
 (Bagpipe Writer format) into **.abc** notation directly from your browser via **drag & drop**.  
 
-It uses the original [bww2abc](http://moinejf.free.fr/) conversion logic (by Jean-François Moine)  
+It uses the original [bww2abc](http://moinejf.free.fr/) conversion script (by Jean-François Moine)  
 wrapped in a Node.js/Express server.
 
 ---
