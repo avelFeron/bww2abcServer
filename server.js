@@ -13,7 +13,7 @@ const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } }); // 10 MB / fichier
 
 const PORT = process.env.PORT || 3000;
-const BWW2ABC_SCRIPT = path.resolve(__dirname, 'bww2abc.js'); // ton script CLI tel quel
+const BWW2ABC_SCRIPT = path.resolve(__dirname, 'bww2abc.js');
 
 // Petite page statique (drag & drop) :
 app.get('/', (req, res) => {
