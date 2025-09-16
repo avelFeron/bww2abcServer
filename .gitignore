@@ -1,0 +1,12 @@
+node_module/
+
+# Environnements temporaires
+.env
+.env.local
+.env.*.local
+
+# Fichiers temporaires du serveur
+converted_abc.zip
+*.abc
+*.bww
+tmp/
