@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* server.js */
 const express = require('express');
-const multer  = require('multer');
+const multer = require('multer');
 const fs = require('fs');
 const fsp = fs.promises;
 const path = require('path');
@@ -29,7 +29,7 @@ app.post('/convert', upload.array('files', 50), async (req, res) => {
     // Écrire chaque fichier en tmp, lancer le script, récupérer stdout .abc
     const tasks = req.files.map(async (file) => {
       const origName = path.parse(file.originalname).name;
-      const inPath   = path.join(tmpDir, `${origName}.bww`);
+      const inPath = path.join(tmpDir, `${origName}.bww`);
       await fsp.writeFile(inPath, file.buffer, 'utf8');
 
       const abc = await runBww2Abc(inPath);
@@ -64,7 +64,7 @@ app.post('/convert', upload.array('files', 50), async (req, res) => {
     res.status(500).json({ error: String(err.message || err) });
   } finally {
     // Nettoyage
-    try { await fsp.rm(tmpDir, { recursive: true, force: true }); } catch {}
+    try { await fsp.rm(tmpDir, { recursive: true, force: true }); } catch { }
   }
 });
 
@@ -139,6 +139,7 @@ const INDEX_HTML = `<!doctype html>
       <p class="hint links" style="margin-top:10px">
         Un grand merci à Jef Moine pour le fichier bww2abc originale : <a href="http://moinejf.free.fr/" target="_blank" rel="noreferrer">moinejf.free.fr</a>
       </p>
+      <p>bww2abc.js: Copyright (C) 2018-2023 Jean-Francois Moine License GPL3+</p>
     </div>
   </div>
 
