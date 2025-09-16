@@ -30,8 +30,10 @@ Clone the repository:
 ```bash
 git clone https://github.com/your-username/bww2abc-server.git
 cd bww2abc-server
-
 ```
+
+or download the repository
+
 
 Install dependencies
 
@@ -43,12 +45,12 @@ Run the server
 
 ```bash
 npm start
+```
 
 During development (auto‑reload with Nodemon):
 
 ```bash
 npm run dev
-```
 ```
 
 ## 🎼 Usage (Web Interface)
