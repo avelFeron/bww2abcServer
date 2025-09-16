@@ -1,10 +1,8 @@
 # bww2abc Server
 
-`bww2abc-server` is a Node.js web application that lets you convert **.bww** files  
-(Bagpipe Writer format) into **.abc** notation directly from your browser via **drag & drop**.  
+`bww2abc-server` is a Node.js web application to convert **.bww** files (Bagpipe Writer format) into **.abc** notation directly from your browser via **drag & drop**.
 
-It uses the original [bww2abc](http://moinejf.free.fr/) conversion script (by Jean-François Moine)  
-wrapped in a Node.js/Express server.
+It wraps the original [bww2abc](http://moinejf.free.fr/) conversion script (by Jean‑François Moine) with an Express server.
 
 ---
 
@@ -41,21 +39,53 @@ Install dependencies
 npm install
 ```
 
-Rune the server
+Run the server
 
 ```bash
 npm start
+
+During development (auto‑reload with Nodemon):
+
+```bash
+npm run dev
+```
 ```
 
 ## 🎼 Usage (Web Interface)
 
-Open http://localhost:3000
- in your browser
+Open http://localhost:3000 in your browser.
 
-Drag & drop one or more .bww files into the page
+- Drag & drop one or more `.bww` files into the page
+- The converted files download automatically
+  - Single file → `.abc` text file
+  - Multiple files → `.zip` archive containing all `.abc`
 
-The converted .abc file(s) are automatically downloaded:
+---
 
-Single file → .abc text file
+## 🗂️ Project Structure
 
-Multiple files → .zip archive containing all .abc
+```
+server.js                # Entrypoint (serves static + mounts routes)
+routes/convert.js        # POST /convert route (upload, convert, zip)
+utils/runBww2Abc.js      # Helper to run bww2abc.js via Node
+public/index.html        # Minimal drag & drop UI
+bww2abc.js               # Conversion script (original logic)
+```
+
+---
+
+## 🔌 API
+
+- `GET /` → Serves `public/index.html` and assets
+- `POST /convert` → Multipart form with `files` field (accepts up to 50 `.bww`)
+  - Returns one `.abc` as `text/plain` or many as `application/zip`
+
+---
+
+## 🖥️ CLI (Optional)
+
+You can still use the converter directly:
+
+```bash
+node bww2abc.js path/to/file.bww > path/to/file.abc
+```
