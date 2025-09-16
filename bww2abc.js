@@ -462,6 +462,18 @@ X:1');
                 }
             }
 
+            // Normalize key accidentals: remove naturals ("=") and duplicates
+            if (key) {
+                const toks = key.split(/\s+/).filter(Boolean);
+                const seen = new Set();
+                const uniq = [];
+                for (const tok of toks) {
+                    if (!tok || tok[0] === '=') continue; // skip naturals in key signature
+                    if (!seen.has(tok)) { seen.add(tok); uniq.push(tok); }
+                }
+                key = uniq.join(' ');
+            }
+
             // get the measure
             t = t[t.length - 1]; // the measure is the last word
             if (!/(C|C_|\d+_\d+)/.test(t)) { // or in the next line
@@ -482,7 +494,7 @@ X:1');
         break
     }
     print('L:1/8\n\
-K:Hp exp ' + key);
+K:Hp' + (key ? ' exp ' + key : ''));
 
     // music
     for ( ; i < p.length; i++) {
