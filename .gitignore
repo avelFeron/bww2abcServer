@@ -11,3 +11,4 @@ converted_abc.zip
 *.abc
 *.bww
 tmp/
+logs/

@@ -1,0 +1,22 @@
+router.post('/', upload.array('files', 50), async (req, res) => {
+  if (!req.files?.length) return res.status(400).json({ error: 'Aucun fichier reçu.' });
+
+  const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'bww2abc-'));
+  try {
+    const tasks = req.files.map(async (file) => {
+      const origName = path.parse(file.originalname).name;
+      const inPath = path.join(tmpDir, `${origName}.bww`);
+      await fsp.writeFile(inPath, file.buffer, 'utf8');
+
+      const abc = await runBww2Abc(inPath);
+      return { name: `${origName}.abc`, content: abc };
+    });
+
+    const results = await Promise.all(tasks);
+
+    if (results.length === 1) {
+      const { name, content } = results[0];
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${name}"`);
+      return res.send(content);
+    }

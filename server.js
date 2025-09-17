@@ -7,6 +7,11 @@ const PORT = process.env.PORT || 3000;
 
 const app = express();
 
+// Optionally trust proxy (to log client IPs behind reverse proxies)
+if (process.env.TRUST_PROXY === '1' || process.env.TRUST_PROXY === 'true') {
+  app.set('trust proxy', true);
+}
+
 // Servir les fichiers statiques (frontend minimal)
 app.use(express.static(path.join(__dirname, 'public')));
 // Exposer abcjs depuis node_modules pour un usage hors-ligne
