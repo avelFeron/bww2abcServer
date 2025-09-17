@@ -1,0 +1,231 @@
+:root {
+  --bg: #f5f7fb;
+  --card: #ffffff;
+  --text: #111318;
+  --muted: #5b6270;
+  --accent: #3a7afe;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu,
+    "Helvetica Neue", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.wrap {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 32px;
+}
+
+.card {
+  background: var(--card);
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+  padding: 24px;
+  color: var(--text);
+  border: 1px solid #e8ebf3;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 28px;
+  color: var(--text);
+}
+
+p {
+  margin: 0 0 16px;
+  color: var(--muted);
+}
+
+.drop {
+  margin-top: 16px;
+  border: 2px dashed #cfd6e6;
+  background: #fbfcff;
+  border-radius: 14px;
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-direction: column;
+  transition: 0.2s background, 0.2s border-color;
+}
+
+.drop.drag {
+  background: #f0f5ff;
+  border-color: var(--accent);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+input[type="file"] {
+  display: none;
+}
+
+.list {
+  margin-top: 18px;
+  display: grid;
+  gap: 8px;
+}
+
+.item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: #f6f8fe;
+  border-radius: 10px;
+  border: 1px solid #e8ebf3;
+}
+
+.name {
+  color: var(--text);
+}
+
+.status {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.footer {
+  margin-top: 22px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.hint {
+  font-size: 12px;
+  color: #7b8496;
+}
+
+.links a {
+  color: var(--accent);
+}
+
+code {
+  color: #333a57;
+  background: #eef2ff;
+  padding: 0 4px;
+  border-radius: 6px;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  opacity: 0.9;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: #5aa1ff33;
+}
+
+@media (max-width: 520px) {
+  .wrap {
+    padding: 18px;
+  }
+  .card {
+    padding: 18px;
+  }
+}
+
+/* Zone ABCJS: fond blanc, notes/traits noirs */
+#paper {
+  background: #ffffff;
+  border: 1px solid #e8ebf3;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+#paper svg {
+  background: #ffffff;
+}
+
+/* Editeur ABC (textarea) */
+.abc-editor {
+  width: 100%;
+  min-height: 220px;
+  background: #ffffff;
+  color: #111318;
+  border: 1px solid #e8ebf3;
+  border-radius: 10px;
+  padding: 12px;
+  font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  resize: vertical;
+}
+
+/* Texte (titres, paroles, indications) en noir */
+#paper svg text { fill: #000 !important; }
+
+/* Traits (portée, barres, hampes, liaisons) en noir */
+#paper svg line,
+#paper svg polyline,
+#paper svg polygon,
+#paper svg path,
+#paper svg rect,
+#paper svg circle,
+#paper svg ellipse { stroke: #000 !important; }
+
+/* Noteheads et symboles remplis en noir (quand remplissables) */
+#paper svg path[fill]:not([fill="none"]) { fill: #000 !important; }
+
+/* Renfort via classes générées par abcjs (add_classes: true) */
+#paper svg [class*="note"],
+#paper svg [class*="rest"],
+#paper svg [class*="accidental"],
+#paper svg [class*="stem"],
+#paper svg [class*="beam"],
+#paper svg [class*="bar"],
+#paper svg [class*="staff"] {
+  stroke: #000 !important;
+  fill: #000 !important;
+}
+
+/* Impression: ne garder que la partition (#paper) en blanc */
+@media print {
+  body { background: #fff !important; }
+  /* Cacher tout puis révéler #paper */
+  body * { visibility: hidden !important; }
+  #paper, #paper * { visibility: visible !important; }
+  /* Nettoyer le look pour l'impression */
+  #paper { 
+    background: #fff !important; 
+    padding: 0 !important; 
+    margin: 0 !important; 
+    position: absolute; 
+    left: 0; top: 0; right: 0; 
+  }
+  #audio-controls, details, .btn, .hint, .links { display: none !important; }
+}
