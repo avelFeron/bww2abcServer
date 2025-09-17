@@ -86,10 +86,8 @@
 
         <div class="footer">
           <button class="btn" id="convert" disabled>Convertir</button>
-          <span class="hint"
-            >Les fichiers convertis seront téléchargés automatiquement (ZIP si
-            plusieurs).</span
-          >
+          <button class="btn" id="reset" type="button">RAZ</button>
+          <span class="hint">Les fichiers convertis seront téléchargés automatiquement (ZIP si plusieurs). RAZ vide la sélection.</span>
         </div>
 
         <p class="hint links" style="margin-top: 10px">
@@ -110,6 +108,7 @@
       const drop = document.getElementById("drop");
       const list = document.getElementById("list");
       const convertBtn = document.getElementById("convert");
+      const resetBtn = document.getElementById("reset");
 
       let files = [];
 
@@ -201,10 +200,61 @@
           row.innerHTML = `
       <span class="name">${f.name}</span>
       <span class="status" id="st-${i}">en attente</span>
+      <button class="btn" data-view-index="${i}" type="button">Voir</button>
     `;
           list.appendChild(row);
         });
         convertBtn.disabled = files.length === 0;
+
+        // Attach per-item view buttons
+        list.querySelectorAll('button[data-view-index]').forEach((btn) => {
+          btn.addEventListener('click', async (e) => {
+            const idx = parseInt(e.currentTarget.getAttribute('data-view-index'), 10);
+            if (isNaN(idx) || !files[idx]) return;
+            // Convert only this file and preview
+            try {
+              const fd = new FormData();
+              fd.append('files', files[idx], files[idx].name);
+              document.getElementById('st-' + idx).textContent = 'conversion...';
+              const resp = await fetch('/convert', { method: 'POST', body: fd });
+              if (!resp.ok) {
+                const err = await safeJson(resp);
+                alert('Erreur: ' + (err?.error || resp.statusText));
+                return;
+              }
+              const abcText = await resp.text();
+              document.getElementById('st-' + idx).textContent = 'prévisualisé';
+              const dlName = files[idx].name.replace(/\.bww$/i, '') + '.abc';
+              showAbc(abcText, dlName);
+            } catch (e) {
+              console.error(e);
+              alert('Erreur: ' + e.message);
+            }
+          });
+        });
+      }
+
+      // RAZ: clear selection and preview
+      if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+          files = [];
+          fileInput.value = '';
+          list.innerHTML = '';
+          convertBtn.disabled = true;
+          // Hide viewer
+          if (viewer) {
+            viewer.style.display = 'none';
+            const paper = document.getElementById('paper');
+            const audio = document.getElementById('audio-controls');
+            if (paper) paper.innerHTML = '';
+            if (audio) audio.innerHTML = '';
+            const code = document.getElementById('abc-code');
+            if (code) {
+              if (code.tagName === 'TEXTAREA') code.value = '';
+              else code.textContent = '';
+            }
+          }
+        });
       }
 
       convertBtn.addEventListener("click", async () => {

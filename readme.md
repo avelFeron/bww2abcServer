@@ -62,17 +62,6 @@ Open http://localhost:3000 in your browser.
   - Single file → `.abc` text file
   - Multiple files → `.zip` archive containing all `.abc`
 
----
-
-## 🗂️ Project Structure
-
-```
-server.js                # Entrypoint (serves static + mounts routes)
-routes/convert.js        # POST /convert route (upload, convert, zip)
-utils/runBww2Abc.js      # Helper to run bww2abc.js via Node
-public/index.html        # Minimal drag & drop UI
-bww2abc.js               # Conversion script (original logic)
-```
 
 ---
 
