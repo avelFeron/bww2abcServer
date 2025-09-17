@@ -3,137 +3,62 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>bww2abc — Convertisseur web</title>
-    <style>
-      :root {
-        --bg: #0b1020;
-        --card: #121933;
-        --text: #eef1ff;
-        --muted: #9aa3c7;
-        --accent: #5aa1ff;
-      }
-      html,
-      body {
-        height: 100%;
-      }
-      body {
-        margin: 0;
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu,
-          "Helvetica Neue", Arial, sans-serif;
-        background: linear-gradient(135deg, #0b1020, #141a39);
-      }
-      .wrap {
-        max-width: 860px;
-        margin: 0 auto;
-        padding: 32px;
-      }
-      .card {
-        background: var(--card);
-        border-radius: 16px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-        padding: 28px;
-        color: var(--text);
-      }
-      h1 {
-        margin: 0 0 8px;
-        font-size: 28px;
-      }
-      p {
-        margin: 0 0 16px;
-        color: var(--muted);
-      }
-      .drop {
-        margin-top: 16px;
-        border: 2px dashed #2c3a70;
-        border-radius: 16px;
-        min-height: 180px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 12px;
-        flex-direction: column;
-        transition: 0.2s background, 0.2s border-color;
-      }
-      .drop.drag {
-        background: #0d1440;
-        border-color: var(--accent);
-      }
-      .btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 10px 14px;
-        border-radius: 12px;
-        background: var(--accent);
-        color: #05122b;
-        border: none;
-        cursor: pointer;
-        font-weight: 600;
-      }
-      .btn:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-      }
-      input[type="file"] {
-        display: none;
-      }
-      .list {
-        margin-top: 18px;
-        display: grid;
-        gap: 8px;
-      }
-      .item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 10px 12px;
-        background: #0e1533;
-        border-radius: 10px;
-      }
-      .name {
-        color: var(--text);
-      }
-      .status {
-        color: var(--muted);
-        font-size: 13px;
-      }
-      .footer {
-        margin-top: 22px;
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-      }
-      .hint {
-        font-size: 12px;
-        color: #7e89b8;
-      }
-      .links a {
-        color: var(--accent);
-      }
-      code {
-        color: #c8d1ff;
-      }
-      a {
-        color: var(--accent);
-      }
-      a:hover {
-        opacity: 0.9;
-      }
-      * {
-        box-sizing: border-box;
-      }
-      ::selection {
-        background: #5aa1ff33;
-      }
-      @media (max-width: 520px) {
-        .wrap {
-          padding: 18px;
+    <title>bww2abc - Convertisseur web</title>
+    <script>
+      // Charge abcjs: local (basic) d'abord, CDN en repli.
+      // Local: on force le bundle "basic" (rendu partition). Audio sera dispo uniquement si on tombe sur le bundle complet via CDN.
+      window.__loadAbcjsPromise = (function () {
+        const CSS_HREF = '/vendor/abcjs/abcjs-audio.css';
+        function ensureCss() {
+          if (document.querySelector('link[data-abcjs-css]')) return;
+          const link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.href = CSS_HREF;
+          link.setAttribute('data-abcjs-css', '');
+          document.head.appendChild(link);
         }
-        .card {
-          padding: 18px;
+
+        function loadScript(src) {
+          return new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = src;
+            s.async = true;
+            s.onload = () => resolve(src);
+            s.onerror = () => reject(new Error('Fail ' + src));
+            document.head.appendChild(s);
+          });
         }
-      }
-    </style>
+
+        async function tryLocal() {
+          // Utilise explicitement la version basic locale (présente dans node_modules/abcjs/dist)
+          await loadScript('/vendor/abcjs/abcjs-basic-min.js');
+        }
+
+        async function tryCdn() {
+          try {
+            await loadScript('https://cdn.jsdelivr.net/npm/abcjs@6.3.0/dist/abcjs-min.js');
+          } catch (_) {
+            await loadScript('https://cdn.jsdelivr.net/npm/abcjs@6.3.0/dist/abcjs-basic-min.js');
+          }
+        }
+
+        return (async () => {
+          if (window.ABCJS) return window.ABCJS;
+          try {
+            await tryLocal();
+          } catch (_) {
+            await tryCdn();
+          }
+          if (!window.ABCJS) throw new Error('abcjs non chargé');
+          if (typeof window.ABCJS.renderAbc !== 'function') {
+            throw new Error('abcjs chargé mais API inattendue (renderAbc manquant)');
+          }
+          ensureCss();
+          return window.ABCJS;
+        })();
+      })();
+    </script>
+    <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <div class="wrap">
@@ -145,14 +70,10 @@
         </p>
         <p>
           <a href="https://bagpipetunes.intertechnics.com/" target="blank"
-            >https://bagpipetunes.intertechnics.com/</a
+            >Pour choisir des fichiers bww: https://bagpipetunes.intertechnics.com/</a
           >
         </p>
-        <p>
-          <a href="https://abc.rectanglered.com/" target="blank"
-            >Pour afficher et imprimer la partition abc</a
-          >
-        </p>
+   
 
         <label class="drop" id="drop">
           <strong>Glissez-déposez ici</strong>
@@ -191,6 +112,59 @@
       const convertBtn = document.getElementById("convert");
 
       let files = [];
+
+      // Zone d'aperçu ABC + audio (ajoutée dynamiquement)
+      const viewer = document.createElement("div");
+      viewer.id = "viewer";
+      viewer.style.marginTop = "20px";
+      viewer.style.display = "none";
+      viewer.innerHTML = `
+       
+        <div id=\"paper\" style=\"background:#0e1533;border-radius:10px;padding:12px;\"></div>
+        <div id=\"audio-controls\" style=\"margin-top:10px;\"></div>
+        <details style=\"margin-top:10px;\">
+          <summary>Voir le code ABC</summary>
+          <pre id=\"abc-code\" style=\"white-space:pre-wrap;color:#c8d1ff;background:#0e1533;padding:12px;border-radius:10px;\"></pre>
+        </details>
+        <div style=\"margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;\">
+          <button class=\"btn\" id=\"download-abc\" type=\"button\">Télécharger le .abc</button>
+        </div>
+      `;
+      document.querySelector('.card').appendChild(viewer);
+      // Ajout dynamique du bouton Imprimer à côté de Télécharger
+      try {
+        const dlParent = document.getElementById('download-abc')?.parentNode;
+        if (dlParent && !document.getElementById('print-abc')) {
+          const printBtn = document.createElement('button');
+          printBtn.className = 'btn';
+          printBtn.id = 'print-abc';
+          printBtn.type = 'button';
+          printBtn.textContent = 'Imprimer';
+          dlParent.appendChild(printBtn);
+        }
+      } catch {}
+
+      // Convertit <pre id="abc-code"> en <textarea id="abc-code" class="abc-editor"> et ajoute un bouton Mettre à jour
+      try {
+        const codeEl = document.getElementById('abc-code');
+        if (codeEl && codeEl.tagName !== 'TEXTAREA') {
+          const ta = document.createElement('textarea');
+          ta.id = 'abc-code';
+          ta.className = 'abc-editor';
+          ta.placeholder = 'Éditez ici le code ABC...';
+          ta.value = codeEl.textContent || '';
+          codeEl.replaceWith(ta);
+        }
+        const actions = document.getElementById('download-abc')?.parentNode;
+        if (actions && !document.getElementById('update-preview')) {
+          const updBtn = document.createElement('button');
+          updBtn.className = 'btn';
+          updBtn.id = 'update-preview';
+          updBtn.type = 'button';
+          updBtn.textContent = 'Mettre à jour';
+          actions.insertBefore(updBtn, actions.firstChild);
+        }
+      } catch {}
 
       pickBtn.addEventListener("click", () => fileInput.click());
       fileInput.addEventListener("change", (e) => addFiles(e.target.files));
@@ -253,6 +227,19 @@
             return;
           }
 
+          // Affichage direct si un seul fichier (text/plain)
+          {
+            const contentTypeHead = resp.headers.get("Content-Type") || "";
+            const isZip = contentTypeHead.includes("application/zip");
+            if (!isZip) {
+              const abcText = await resp.text();
+              const dlName = files[0].name.replace(/\.bww$/i, "") + ".abc";
+              files.forEach((_, i) => (document.getElementById("st-" + i).textContent = "prévisualisé"));
+              showAbc(abcText, dlName);
+              return; // ne pas exécuter le flux ZIP
+            }
+          }
+
           const blob = await resp.blob();
           // s'il y a 1 fichier côté serveur, il renvoie text/plain; sinon application/zip
           const contentType = resp.headers.get("Content-Type") || "";
@@ -291,6 +278,167 @@
         } catch {
           return null;
         }
+      }
+
+      async function showAbc(abcText, dlName) {
+        // Attendre que abcjs soit chargé (local ou CDN)
+        try {
+          await (window.__loadAbcjsPromise || Promise.reject(new Error('Chargeur abcjs manquant')));
+        } catch (e) {
+          console.error(e);
+          alert('abcjs n\'est pas disponible. Vérifiez la connexion ou l\'installation.');
+          return;
+        }
+        // Affiche la zone viewer
+        viewer.style.display = "block";
+        document.getElementById("abc-code").textContent = abcText;
+
+        // Efface tout rendu précédent
+        document.getElementById("paper").innerHTML = "";
+        document.getElementById("audio-controls").innerHTML = "";
+
+        // Rendu de la partition
+        if (!window.ABCJS || typeof ABCJS.renderAbc !== 'function') {
+          alert('abcjs est chargé mais la fonction renderAbc est indisponible. Essayez d\'actualiser la page.');
+          return;
+        }
+        const visualObjs = ABCJS.renderAbc("paper", abcText, {
+          responsive: "resize",
+          add_classes: true,
+        });
+
+        // Contrôles audio si supportés
+        if (ABCJS && ABCJS.synth && ABCJS.synth.supportsAudio()) {
+          const visualObj = visualObjs[0];
+          const synthControl = new ABCJS.synth.SynthController();
+          synthControl.load("#audio-controls", null, {
+            displayPlay: true,
+            displayRestart: true,
+            displayProgress: true,
+            displayClock: true,
+          });
+          synthControl.setTune(visualObj, false).catch((e) => console.warn(e));
+        }
+
+        // Bouton de téléchargement du .abc
+        const dlBtn = document.getElementById("download-abc");
+        dlBtn.onclick = () => {
+          const blob = new Blob([abcText], { type: "text/plain;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          const a = Object.assign(document.createElement("a"), { href: url, download: dlName });
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+        };
+
+        const printBtn = document.getElementById('print-abc');
+        if (printBtn) {
+          printBtn.onclick = () => {
+            const title = (dlName || 'Partition').replace(/\.abc$/i, '');
+            const svgHtml = document.getElementById('paper')?.innerHTML || '';
+            printPaperInIframe(svgHtml, title);
+          };
+        }
+
+        // Prépare éditeur (textarea) et actions (update + download sur contenu courant)
+        try {
+          const editor = document.getElementById('abc-code');
+          if (editor && editor.tagName === 'TEXTAREA' && !editor.value) {
+            editor.value = abcText;
+            editor.addEventListener('keydown', (e) => {
+              if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                const up = document.getElementById('update-preview');
+                if (up) up.click();
+              }
+            });
+          }
+          const dl = document.getElementById('download-abc');
+          if (dl) {
+            dl.onclick = () => {
+              const current = (document.getElementById('abc-code')?.value) || abcText;
+              const blob = new Blob([current], { type: 'text/plain;charset=utf-8' });
+              const url = URL.createObjectURL(blob);
+              const a = Object.assign(document.createElement('a'), { href: url, download: dlName });
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              URL.revokeObjectURL(url);
+            };
+          }
+          const upd = document.getElementById('update-preview');
+          const rerender = () => {
+            const updated = (document.getElementById('abc-code')?.value) || abcText;
+            document.getElementById('paper').innerHTML = '';
+            document.getElementById('audio-controls').innerHTML = '';
+            const objs = ABCJS.renderAbc('paper', updated, { responsive: 'resize', add_classes: true });
+            if (ABCJS && ABCJS.synth && ABCJS.synth.supportsAudio()) {
+              const v = objs[0];
+              const sc = new ABCJS.synth.SynthController();
+              sc.load('#audio-controls', null, { displayPlay: true, displayRestart: true, displayProgress: true, displayClock: true });
+              sc.setTune(v, false).catch((e) => console.warn(e));
+            }
+          };
+          if (upd) {
+            upd.onclick = rerender;
+          }
+          // Live update avec debounce
+          if (editor && editor.tagName === 'TEXTAREA') {
+            let t = null;
+            editor.addEventListener('input', () => {
+              if (t) clearTimeout(t);
+              t = setTimeout(() => {
+                rerender();
+              }, 400);
+            });
+          }
+        } catch {}
+      }
+
+      function printPaperInIframe(svgHtml, title) {
+        if (!svgHtml) {
+          alert("Rien à imprimer — la partition n'est pas rendue.");
+          return;
+        }
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        document.body.appendChild(iframe);
+
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+        const safeTitle = (title || 'Partition').replace(/</g,'&lt;');
+        doc.open();
+        doc.write(`<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>${safeTitle}</title>
+  <style>
+    @page { margin: 12mm; }
+    html, body { background:#fff; margin:0; padding:0; }
+    .paper { margin: 0 auto; }
+    svg { width: 100%; height: auto; }
+  </style>
+</head>
+<body>
+  <div class="paper">${svgHtml}</div>
+</body>
+</html>`);
+        doc.close();
+
+        const w = iframe.contentWindow;
+        // Attendre la mise en page de l'iframe
+        setTimeout(() => {
+          w.focus();
+          w.print();
+          // nettoyage après un court délai
+          setTimeout(() => iframe.remove(), 200);
+        }, 50);
       }
     </script>
   </body>
