@@ -3,7 +3,7 @@
 
 // bww2abc.js — Run this script with Node.js
 // Original: bww2abc (C) 2018-2023 Jean-Francois Moine, GPL-3.0+
-// Node.js wrapper & shims by <you>
+// Node.js wrapper & shims by Avel FERON
 
 // ===== Node shims for non-standard JS shell APIs =====
 const fs = require('fs');
@@ -13,8 +13,6 @@ function print(s)    { process.stdout.write(String(s) + '\n'); }
 function printErr(s) { process.stderr.write(String(s) + '\n'); }
 function quit(code=1){ process.exit(code); }
 
-// In original shells, `scriptArgs` usually contains only user args.
-// Here we emulate it from process.argv, skipping [node, script].
 const scriptArgs = process.argv.slice(2);
 
 // ======== ORIGINAL SCRIPT (unchanged except where noted) =========
