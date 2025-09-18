@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 
 <head>
@@ -118,6 +118,14 @@
 
     let files = [];
 
+    const DEFAULT_SOUNDFONT_URL = 'https://paulrosen.github.io/midi-js-soundfonts/FluidR3_GM/';
+    const audioState = { instrument: 'bagpipe', graceFraction: 0.1 };
+    let ornamentUpdateTimer = null;
+    let activeSynthControl = null;
+    let activeVisualObj = null;
+    let activeAbcSource = '';
+    let activeDownloadName = '';
+
     // Zone d'aperçu ABC + audio (ajoutée dynamiquement)
     const viewer = document.createElement("div");
     viewer.id = "viewer";
@@ -136,6 +144,72 @@
         </div>
       `;
     document.querySelector('.card').appendChild(viewer);
+    const audioControlsHost = viewer.querySelector('#audio-controls');
+    const audioSettingsWrap = document.createElement('div');
+    audioSettingsWrap.id = 'audio-settings';
+    audioSettingsWrap.style.cssText = 'margin-top:10px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;';
+    audioSettingsWrap.innerHTML = [
+      '<label class="hint" style="display:flex;flex-direction:column;gap:4px;min-width:190px;">',
+      '<span>Instrument</span>',
+      '<select id="instrument-select" style="padding:6px;border-radius:6px;background:#0e1533;color:#c8d1ff;border:1px solid #394380;">',
+      '<option value="bagpipe" selected>Cornemuse (GHB)</option>',
+      '<option value="default">Instrument d\'origine</option>',
+      '</select>',
+      '</label>',
+      '<label class="hint" for="ornament-range" style="display:flex;flex-direction:column;gap:4px;min-width:220px;">',
+      '<span>Duree des ornements</span>',
+      '<input type="range" id="ornament-range" min="0.05" max="0.20" step="0.01" value="0.1" style="width:200px;" />',
+      '</label>',
+      '<span id="ornament-value" class="hint">10 % de la note</span>'
+    ].join('');
+    if (audioControlsHost && audioControlsHost.parentNode) {
+      audioControlsHost.insertAdjacentElement('afterend', audioSettingsWrap);
+    } else {
+      viewer.appendChild(audioSettingsWrap);
+    }
+    const instrumentSelect = viewer.querySelector('#instrument-select');
+    const ornamentRange = viewer.querySelector('#ornament-range');
+    const ornamentValue = viewer.querySelector('#ornament-value');
+
+    const applyOrnamentFraction = (nextValue) => {
+      const clamped = clampGraceFraction(nextValue);
+      audioState.graceFraction = clamped;
+      if (ornamentRange) {
+        const current = Number.parseFloat(ornamentRange.value);
+        if (Number.isNaN(current) || Math.abs(current - clamped) > 1e-3) {
+          ornamentRange.value = String(clamped);
+        }
+      }
+      if (ornamentValue) {
+        ornamentValue.textContent = formatOrnamentFraction(clamped);
+      }
+      return clamped;
+    };
+
+    if (instrumentSelect) {
+      audioState.instrument = instrumentSelect.value || audioState.instrument;
+      instrumentSelect.addEventListener('change', () => {
+        audioState.instrument = instrumentSelect.value;
+        scheduleSynthRefresh();
+      });
+    }
+
+    if (ornamentRange) {
+      applyOrnamentFraction(audioState.graceFraction);
+      ornamentRange.addEventListener('input', (event) => {
+        const raw = Number(event.target.value);
+        if (!Number.isNaN(raw)) {
+          applyOrnamentFraction(raw);
+          scheduleSynthRefresh();
+        }
+      });
+      ornamentRange.addEventListener('change', () => {
+        scheduleSynthRefresh();
+      });
+    } else if (ornamentValue) {
+      ornamentValue.textContent = formatOrnamentFraction(audioState.graceFraction);
+    }
+
     // Ajout dynamique du bouton Imprimer à côté de Télécharger
     try {
       const dlParent = document.getElementById('download-abc')?.parentNode;
@@ -336,57 +410,181 @@
       }
     }
 
+    function clampGraceFraction(value) {
+      const min = 0.05;
+      const max = 0.20;
+      const numeric = Number(value);
+      if (Number.isNaN(numeric)) {
+        return 0.1;
+      }
+      return Math.min(max, Math.max(min, numeric));
+    }
+
+    function formatOrnamentFraction(fraction) {
+      const percent = Math.round(clampGraceFraction(fraction) * 100);
+      return percent + ' % de la note';
+    }
+
+    function applyGraceTiming(noteMapTracks, fraction) {
+      if (!Array.isArray(noteMapTracks) || noteMapTracks.length === 0) {
+        return;
+      }
+      const target = clampGraceFraction(fraction);
+      if (Math.abs(target - 0.5) < 1e-3) {
+        return;
+      }
+      noteMapTracks.forEach((track) => {
+        if (!Array.isArray(track) || track.length === 0) {
+          return;
+        }
+        track.sort((a, b) => a.start - b.start);
+        const graceGroup = [];
+        for (let i = 0; i < track.length; i += 1) {
+          const note = track[i];
+          if (note.style === 'grace') {
+            graceGroup.push(note);
+            continue;
+          }
+          if (graceGroup.length === 0) {
+            continue;
+          }
+          const mainNote = note;
+          const groupStart = graceGroup[0].start;
+          const graceSpan = mainNote.start - groupStart;
+          const mainSpan = mainNote.end - mainNote.start;
+          if (graceSpan > 0 && mainSpan > 0) {
+            const total = graceSpan + mainSpan;
+            const desiredGraceSpan = total * target;
+            const desiredMainSpan = total - desiredGraceSpan;
+            const scale = desiredGraceSpan / graceSpan;
+            let cursor = groupStart;
+            graceGroup.forEach((grace) => {
+              const baseLength = grace.end - grace.start;
+              const scaledLength = baseLength * scale;
+              grace.start = cursor;
+              grace.end = cursor + scaledLength;
+              cursor = grace.end;
+            });
+            mainNote.start = groupStart + desiredGraceSpan;
+            mainNote.end = mainNote.start + desiredMainSpan;
+          }
+          graceGroup.length = 0;
+        }
+      });
+    }
+
+    function buildAudioParams() {
+      const graceFraction = clampGraceFraction(audioState.graceFraction);
+      return {
+        sequenceCallback: (noteMapTracks) => {
+          applyGraceTiming(noteMapTracks, graceFraction);
+        },
+        options: {
+          program: audioState.instrument === 'bagpipe' ? 109 : 0,
+          soundFontUrl: DEFAULT_SOUNDFONT_URL,
+        },
+      };
+    }
+
+    function scheduleSynthRefresh() {
+      if (!activeVisualObj) {
+        return;
+      }
+      if (ornamentUpdateTimer) {
+        clearTimeout(ornamentUpdateTimer);
+      }
+      ornamentUpdateTimer = setTimeout(() => {
+        ornamentUpdateTimer = null;
+        setupSynth(activeVisualObj);
+      }, 150);
+    }
+
+    function setupSynth(visualObj) {
+      if (!visualObj || !ABCJS || !ABCJS.synth || !ABCJS.synth.supportsAudio()) {
+        return;
+      }
+      if (ornamentUpdateTimer) {
+        clearTimeout(ornamentUpdateTimer);
+        ornamentUpdateTimer = null;
+      }
+      const controls = document.getElementById('audio-controls');
+      if (controls) {
+        controls.innerHTML = '';
+      }
+      if (activeSynthControl && typeof activeSynthControl.destroy === 'function') {
+        try {
+          activeSynthControl.destroy();
+        } catch (err) {
+          console.warn(err);
+        }
+      }
+      const synthControl = new ABCJS.synth.SynthController();
+      synthControl.load('#audio-controls', null, {
+        displayPlay: true,
+        displayRestart: true,
+        displayProgress: true,
+        displayClock: true,
+      });
+      synthControl.setTune(visualObj, false, buildAudioParams()).catch((error) => console.warn(error));
+      activeSynthControl = synthControl;
+    }
+
     async function showAbc(abcText, dlName) {
       // Attendre que abcjs soit chargé (local ou CDN)
       try {
         await (window.__loadAbcjsPromise || Promise.reject(new Error('Chargeur abcjs manquant')));
       } catch (e) {
         console.error(e);
-        alert('abcjs n\'est pas disponible. Vérifiez la connexion ou l\'installation.');
+        alert("abcjs n'est pas disponible. Verifiez la connexion ou l'installation.");
         return;
       }
       // Affiche la zone viewer
       viewer.style.display = "block";
       document.getElementById("abc-code").textContent = abcText;
+      activeAbcSource = abcText;
+      activeDownloadName = dlName;
 
-      // Efface tout rendu précédent
-      document.getElementById("paper").innerHTML = "";
-      document.getElementById("audio-controls").innerHTML = "";
+      const paper = document.getElementById("paper");
+      if (paper) {
+        paper.innerHTML = "";
+      }
+      const audioContainer = document.getElementById("audio-controls");
+      if (audioContainer) {
+        audioContainer.innerHTML = "";
+      }
 
       // Rendu de la partition
       if (!window.ABCJS || typeof ABCJS.renderAbc !== 'function') {
-        alert('abcjs est chargé mais la fonction renderAbc est indisponible. Essayez d\'actualiser la page.');
+        alert("abcjs est charge mais la fonction renderAbc est indisponible. Essayez d'actualiser la page.");
         return;
       }
       const visualObjs = ABCJS.renderAbc("paper", abcText, {
         responsive: "resize",
         add_classes: true,
       });
+      activeVisualObj = Array.isArray(visualObjs) ? visualObjs[0] : null;
+      applyOrnamentFraction(audioState.graceFraction);
 
-      // Contrôles audio si supportés
-      if (ABCJS && ABCJS.synth && ABCJS.synth.supportsAudio()) {
-        const visualObj = visualObjs[0];
-        const synthControl = new ABCJS.synth.SynthController();
-        synthControl.load("#audio-controls", null, {
-          displayPlay: true,
-          displayRestart: true,
-          displayProgress: true,
-          displayClock: true,
-        });
-        synthControl.setTune(visualObj, false).catch((e) => console.warn(e));
+      // Audio controls if supported
+      if (ABCJS && ABCJS.synth && ABCJS.synth.supportsAudio() && activeVisualObj) {
+        setupSynth(activeVisualObj);
+      } else {
+        activeSynthControl = null;
       }
 
-      // Bouton de téléchargement du .abc
+      // Download button (.abc)
       const dlBtn = document.getElementById("download-abc");
-      dlBtn.onclick = () => {
-        const blob = new Blob([abcText], { type: "text/plain;charset=utf-8" });
-        const url = URL.createObjectURL(blob);
-        const a = Object.assign(document.createElement("a"), { href: url, download: dlName });
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-      };
+      if (dlBtn) {
+        dlBtn.onclick = () => {
+          const blob = new Blob([activeAbcSource || abcText], { type: "text/plain;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          const a = Object.assign(document.createElement("a"), { href: url, download: (activeDownloadName || dlName) });
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+        };
+      }
 
       const printBtn = document.getElementById('print-abc');
       if (printBtn) {
@@ -414,9 +612,11 @@
         if (dl) {
           dl.onclick = () => {
             const current = (document.getElementById('abc-code')?.value) || abcText;
+            activeAbcSource = current;
+            activeDownloadName = dlName;
             const blob = new Blob([current], { type: 'text/plain;charset=utf-8' });
             const url = URL.createObjectURL(blob);
-            const a = Object.assign(document.createElement('a'), { href: url, download: dlName });
+            const a = Object.assign(document.createElement('a'), { href: url, download: (activeDownloadName || dlName) });
             document.body.appendChild(a);
             a.click();
             a.remove();
@@ -426,14 +626,22 @@
         const upd = document.getElementById('update-preview');
         const rerender = () => {
           const updated = (document.getElementById('abc-code')?.value) || abcText;
-          document.getElementById('paper').innerHTML = '';
-          document.getElementById('audio-controls').innerHTML = '';
+          const paperEl = document.getElementById('paper');
+          if (paperEl) {
+            paperEl.innerHTML = '';
+          }
+          const audioEl = document.getElementById('audio-controls');
+          if (audioEl) {
+            audioEl.innerHTML = '';
+          }
           const objs = ABCJS.renderAbc('paper', updated, { responsive: 'resize', add_classes: true });
-          if (ABCJS && ABCJS.synth && ABCJS.synth.supportsAudio()) {
-            const v = objs[0];
-            const sc = new ABCJS.synth.SynthController();
-            sc.load('#audio-controls', null, { displayPlay: true, displayRestart: true, displayProgress: true, displayClock: true });
-            sc.setTune(v, false).catch((e) => console.warn(e));
+          activeAbcSource = updated;
+          activeVisualObj = Array.isArray(objs) ? objs[0] : null;
+          applyOrnamentFraction(audioState.graceFraction);
+          if (ABCJS && ABCJS.synth && ABCJS.synth.supportsAudio() && activeVisualObj) {
+            setupSynth(activeVisualObj);
+          } else {
+            activeSynthControl = null;
           }
         };
         if (upd) {
