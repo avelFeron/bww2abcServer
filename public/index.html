@@ -540,7 +540,14 @@
       }
       // Affiche la zone viewer
       viewer.style.display = "block";
-      document.getElementById("abc-code").textContent = abcText;
+      const codeEl = document.getElementById("abc-code");
+      if (codeEl) {
+        if (typeof codeEl.value === 'string') {
+          codeEl.value = abcText;
+        } else {
+          codeEl.textContent = abcText;
+        }
+      }
       activeAbcSource = abcText;
       activeDownloadName = dlName;
 
